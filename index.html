@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DoToR Admin Dashboard</title>
+  <meta name="description" content="DoToR Admin Dashboard - Monitor orders, repairs, and area-wise traffic" />
+  <meta name="theme-color" content="#1A3A6B" />
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ═══ LOGIN SCREEN ═══ -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <div class="login-logo">🔧</div>
+      <div class="login-brand">DoToR</div>
+      <div class="login-brand-sub">ADMIN DASHBOARD</div>
+      <div class="login-form">
+        <div class="form-group">
+          <label class="form-label">Admin Password</label>
+          <div class="form-field">
+            <span class="form-field-icon">🔑</span>
+            <input type="password" id="adminPassword" class="form-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter') adminLogin()" />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="adminLogin()">
+          <span>🔐</span> Sign In to Dashboard
+        </button>
+        <div id="loginError" class="login-error"></div>
+      </div>
+      <div class="login-footer">
+        <a href="../dotorweb/" class="login-link">← Back to DoToR App</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD SCREEN ═══ -->
+  <div id="dashboardScreen" class="dashboard-screen" style="display:none">
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+      <div class="nav-left">
+        <span class="nav-brand">🔧 DoToR</span>
+        <span class="nav-brand-sub">Admin Panel</span>
+      </div>
+      <div class="nav-center">
+        <span class="nav-title">📊 Dashboard</span>
+      </div>
+      <div class="nav-right">
+        <span id="lastRefresh" class="nav-refresh">Just now</span>
+        <button class="btn btn-sm btn-outline-nav" onclick="refreshData()" title="Refresh data">
+          🔄 Refresh
+        </button>
+        <button class="btn btn-sm btn-danger-nav" onclick="adminLogout()" title="Logout">
+          🚪 Logout
+        </button>
+      </div>
+    </nav>
+
+    <div class="dashboard-body">
+      <!-- Date Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label">📅 From</label>
+          <input type="date" id="filterFrom" class="filter-input" onchange="applyFilters()" />
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">📅 To</label>
+          <input type="date" id="filterTo" class="filter-input" onchange="applyFilters()" />
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">📍 Area</label>
+          <select id="filterArea" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Areas</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">📋 Status</label>
+          <select id="filterStatus" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Statuses</option>
+            <option value="pending">⏳ Pending</option>
+            <option value="accepted">🔧 Accepted</option>
+            <option value="completed">✅ Completed</option>
+            <option value="rejected">❌ Rejected</option>
+          </select>
+        </div>
+        <div class="filter-group filter-actions">
+          <button class="btn btn-sm btn-primary" onclick="resetFilters()">🔄 Reset</button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay" style="display:none">
+        <div class="loading-spinner"></div>
+        <span>Loading data...</span>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card stat-card-total">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statTotal">--</div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-pending">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statPending">--</div>
+            <div class="stat-label">Pending</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-active">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statAccepted">--</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-completed">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statCompleted">--</div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-rejected">
+          <div class="stat-icon">❌</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statRejected">--</div>
+            <div class="stat-label">Rejected</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-today">
+          <div class="stat-icon">📅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statToday">--</div>
+            <div class="stat-label">Today's Orders</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="card-header">
+            <span class="card-title">📊 Order Status Distribution</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <span class="card-title">📈 Orders Over Time (Last 7 Days)</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Area-wise Traffic & Recent Orders -->
+      <div class="data-row">
+        <!-- Area-wise Breakdown -->
+        <div class="data-card data-card-half">
+          <div class="card-header">
+            <span class="card-title">📍 Area-wise Order Traffic</span>
+            <span class="card-badge" id="areaCount">0 areas</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="areaTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>📍 Area / Location</th>
+                  <th>📮 Pincode</th>
+                  <th>📦 Total Orders</th>
+                  <th>✅ Completed</th>
+                  <th>⏳ Pending</th>
+                  <th>🔧 Active</th>
+                  <th>📊 Completion Rate</th>
+                </tr>
+              </thead>
+              <tbody id="areaTableBody">
+                <tr><td colspan="8" class="table-empty">Loading area data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="data-card data-card-half">
+          <div class="card-header">
+            <span class="card-title">🕐 Recent Orders</span>
+            <span class="card-badge" id="orderCount">0 orders</span>
+          </div>
+          <div class="table-search">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="orderSearch" class="search-input" placeholder="Search by name, brand, location..." oninput="filterOrdersTable()" />
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="ordersTable">
+              <thead>
+                <tr>
+                  <th>🕐 Time</th>
+                  <th>👤 Customer</th>
+                  <th>📱 Device</th>
+                  <th>🔧 Repair</th>
+                  <th>📍 Location</th>
+                  <th>📋 Status</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr><td colspan="6" class="table-empty">Loading orders...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dashboard-footer">
+      <span>🔧 DoToR Admin Dashboard v1.0</span>
+      <span id="footerStats">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/app.js"></script>
+</body>
+</html>
