@@ -728,6 +728,52 @@ html, body {
 .rate-mid { color: var(--warning); }
 .rate-low { color: var(--danger); }
 
+/* Technician Badge */
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  background: #e8eaf6;
+  white-space: nowrap;
+}
+
+.tech-none {
+  color: #ccc;
+  font-size: 13px;
+}
+
+/* Area Technician List */
+.area-tech-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.area-tech-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--navy);
+}
+
+.area-tech-tag.accepted {
+  background: var(--primary);
+}
+
+.area-tech-tag.completed {
+  background: var(--success);
+}
+
 /* ════════════════════════════════════════════════════════════
    DASHBOARD FOOTER
    ════════════════════════════════════════════════════════════ */

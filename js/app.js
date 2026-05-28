@@ -297,6 +297,10 @@ function processData() {
 
   // Populate area filter
   populateAreaFilter();
+  // Populate brand, repair, and technician filters
+  populateBrandFilter();
+  populateRepairFilter();
+  populateTechnicianFilter();
   applyFilters();
 }
 
@@ -319,6 +323,72 @@ function populateAreaFilter() {
   }
 }
 
+function populateBrandFilter() {
+  const select = $('filterBrand');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="all">All Brands</option>';
+
+  const brands = [...new Set(allOrders.map(o => o.brand).filter(Boolean))].sort();
+  brands.forEach((brand) => {
+    const count = allOrders.filter(o => o.brand === brand).length;
+    const opt = document.createElement('option');
+    opt.value = brand;
+    opt.textContent = `${brand} (${count})`;
+    select.appendChild(opt);
+  });
+
+  if (currentValue !== 'all' && brands.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function populateRepairFilter() {
+  const select = $('filterRepair');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="all">All Repairs</option>';
+
+  const repairs = [...new Set(allOrders.map(o => o.repair).filter(Boolean))].sort();
+  repairs.forEach((repair) => {
+    const count = allOrders.filter(o => o.repair === repair).length;
+    const opt = document.createElement('option');
+    opt.value = repair;
+    opt.textContent = `${repair} (${count})`;
+    select.appendChild(opt);
+  });
+
+  if (currentValue !== 'all' && repairs.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function populateTechnicianFilter() {
+  const select = $('filterTechnician');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="all">All Technicians</option>';
+
+  // Collect unique technicians (techName) from orders
+  const techSet = new Set();
+  allOrders.forEach(o => {
+    if (o.techName && o.techName.trim()) {
+      techSet.add(o.techName.trim());
+    }
+  });
+  const techs = [...techSet].sort();
+  techs.forEach((tech) => {
+    const accepted = allOrders.filter(o => o.techName === tech && o.status === 'accepted').length;
+    const completed = allOrders.filter(o => o.techName === tech && o.status === 'completed').length;
+    const total = accepted + completed;
+    const opt = document.createElement('option');
+    opt.value = tech;
+    opt.textContent = `${tech} (${total} jobs)`;
+    select.appendChild(opt);
+  });
+
+  if (currentValue !== 'all' && techs.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
 // ════════════════════════════════════════════════════════════
 // FILTERING
 // ════════════════════════════════════════════════════════════
@@ -328,6 +398,9 @@ function applyFilters() {
   const toDate = $('filterTo').value;
   const area = $('filterArea').value;
   const status = $('filterStatus').value;
+  const brand = $('filterBrand').value;
+  const repair = $('filterRepair').value;
+  const technician = $('filterTechnician').value;
 
   filteredOrders = allOrders.filter((order) => {
     const orderTime = order._parsedTime || 0;
@@ -354,6 +427,15 @@ function applyFilters() {
     // Status filter
     if (status !== 'all' && order.status !== status) return false;
 
+    // Brand filter
+    if (brand !== 'all' && (order.brand || '') !== brand) return false;
+
+    // Repair filter
+    if (repair !== 'all' && (order.repair || '') !== repair) return false;
+
+    // Technician filter
+    if (technician !== 'all' && (order.techName || '').trim() !== technician) return false;
+
     return true;
   });
 
@@ -368,6 +450,9 @@ function resetFilters() {
   $('filterFrom').value = getDateStr(weekAgo.getTime());
   $('filterArea').value = 'all';
   $('filterStatus').value = 'all';
+  $('filterBrand').value = 'all';
+  $('filterRepair').value = 'all';
+  $('filterTechnician').value = 'all';
   applyFilters();
 }
 
@@ -428,13 +513,18 @@ function renderAreaTable() {
     if (!area && pincode) area = 'Pincode: ' + pincode;
 
     if (!areaStats[area]) {
-      areaStats[area] = { name: area, pincode, total: 0, completed: 0, pending: 0, accepted: 0 };
+      areaStats[area] = { name: area, pincode, total: 0, completed: 0, pending: 0, accepted: 0, rejected: 0, techs: new Set() };
     }
     areaStats[area].total++;
     if (order.status === 'completed') areaStats[area].completed++;
     else if (order.status === 'pending') areaStats[area].pending++;
     else if (order.status === 'accepted') areaStats[area].accepted++;
+    else if (order.status === 'rejected') areaStats[area].rejected++;
     if (pincode && !areaStats[area].pincode) areaStats[area].pincode = pincode;
+    // Track technicians assigned to jobs in this area
+    if (order.techName && order.techName.trim()) {
+      areaStats[area].techs.add(order.techName.trim());
+    }
   });
 
   const entries = Object.entries(areaStats).sort((a, b) => b[1].total - a[1].total);
@@ -443,7 +533,7 @@ function renderAreaTable() {
   $('areaCount').textContent = entries.length + ' areas';
 
   if (entries.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">📭 No orders match the current filters</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="table-empty">📭 No orders match the current filters</td></tr>';
     return;
   }
 
@@ -451,7 +541,11 @@ function renderAreaTable() {
     .map(([area, data], i) => {
       const completionRate = data.total > 0 ? ((data.completed / data.total) * 100).toFixed(1) : 0;
       const rateClass = completionRate >= 70 ? 'rate-high' : completionRate >= 40 ? 'rate-mid' : 'rate-low';
-      const barWidth = (data.total / maxTotal) * 100;
+
+      // Build technician tags
+      const techTags = data.techs.size > 0
+        ? [...data.techs].map(t => `<span class="area-tech-tag">🛵 ${t}</span>`).join('')
+        : '<span class="tech-none">—</span>';
 
       return `
         <tr>
@@ -466,6 +560,9 @@ function renderAreaTable() {
           <td>${data.completed}</td>
           <td>${data.pending}</td>
           <td>${data.accepted}</td>
+          <td>
+            <div class="area-tech-list">${techTags}</div>
+          </td>
           <td>
             <span class="completion-rate ${rateClass}">${completionRate}%</span>
             <div class="area-bar-container">
@@ -499,6 +596,7 @@ function renderOrdersTable() {
         (o.repair || '').toLowerCase().includes(searchQuery) ||
         (o.location || '').toLowerCase().includes(searchQuery) ||
         (o.pincode || '').includes(searchQuery) ||
+        (o.techName || '').toLowerCase().includes(searchQuery) ||
         (o.status || '').includes(searchQuery)
     );
   }
@@ -507,7 +605,7 @@ function renderOrdersTable() {
   const tableOrders = displayOrders.slice(0, 100);
 
   if (tableOrders.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">📭 No orders match the current filters</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">📭 No orders match the current filters</td></tr>';
     return;
   }
 
@@ -521,15 +619,19 @@ function renderOrdersTable() {
   tbody.innerHTML = tableOrders
     .map((order) => {
       const s = statusMap[order.status] || { label: order.status || 'Unknown', class: '' };
+      const techDisplay = order.techName
+        ? `<span class="tech-badge">🛵 ${order.techName}</span>`
+        : '<span class="tech-none">—</span>';
       return `
         <tr>
           <td style="white-space:nowrap">${formatTime(order._parsedTime)}</td>
           <td><strong>${order.customerName || 'Unknown'}</strong></td>
           <td>${order.brand || '—'}</td>
           <td>${order.repair || '—'}</td>
-          <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             ${order.location || ''}${order.pincode ? ' 📮' + order.pincode : ''}
           </td>
+          <td>${techDisplay}</td>
           <td><span class="status-badge ${s.class}">${s.label}</span></td>
         </tr>
       `;

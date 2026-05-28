@@ -92,6 +92,24 @@
             <option value="rejected">❌ Rejected</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">📱 Device Brand</label>
+          <select id="filterBrand" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Brands</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">🔧 Repair Type</label>
+          <select id="filterRepair" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Repairs</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">👤 Technician</label>
+          <select id="filterTechnician" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Technicians</option>
+          </select>
+        </div>
         <div class="filter-group filter-actions">
           <button class="btn btn-sm btn-primary" onclick="resetFilters()">🔄 Reset</button>
         </div>
@@ -188,11 +206,12 @@
                   <th>✅ Completed</th>
                   <th>⏳ Pending</th>
                   <th>🔧 Active</th>
+                  <th>👤 Technicians</th>
                   <th>📊 Completion Rate</th>
                 </tr>
               </thead>
               <tbody id="areaTableBody">
-                <tr><td colspan="8" class="table-empty">Loading area data...</td></tr>
+                <tr><td colspan="9" class="table-empty">Loading area data...</td></tr>
               </tbody>
             </table>
           </div>
@@ -217,11 +236,12 @@
                   <th>📱 Device</th>
                   <th>🔧 Repair</th>
                   <th>📍 Location</th>
+                  <th>👤 Technician</th>
                   <th>📋 Status</th>
                 </tr>
               </thead>
               <tbody id="ordersTableBody">
-                <tr><td colspan="6" class="table-empty">Loading orders...</td></tr>
+                <tr><td colspan="7" class="table-empty">Loading orders...</td></tr>
               </tbody>
             </table>
           </div>
